@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "R1CANIDList.h"
 
 /* USER CODE END Includes */
 
@@ -142,7 +143,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 
 		case CANID_SHOOT:
 			if(RxData[0] != 0)break;
-			shoot();
+			Shoot();
 			printf("Shoot\r\n");
 			break;
 
