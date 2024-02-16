@@ -35,18 +35,21 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define EXPAND 0
-#define UNEXPAND 1
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+#define CATCH 0
+#define READY 1
+
+#define UNEXPAND 0
+#define EXPAND 1
 
 #define DELAY 800
 
 #define FALSE 0
 #define TRUE 1
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -148,6 +151,8 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 			break;
 
 		case CANID_BALL_HAND:
+			if(RxData[0] == CATCH)Hand_Catch();
+			else if(RxData[0] == READY)Hand_Ready();
 			printf("Ball hand  %d\r\n", RxData[0]);
 			break;
 
