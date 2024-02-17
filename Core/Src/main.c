@@ -100,25 +100,28 @@ void Shoot(void){
 		HAL_Delay(DELAY);
 	}
 
-	//飛�?�出し防止機構をオフ（非通電時にオン?�?
-	HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_SET);
-	HAL_Delay(DELAY);
 	//�?填
 	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_SET);
 	HAL_Delay(DELAY);
 	//�?填機構を戻�?
 	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_RESET);
 	HAL_Delay(DELAY);
-	//飛�?�出し防止機構をオン
-	HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_RESET);
+
+	Hand_Ready();
+
 }
 
 void Hand_Catch(void){
 	//ハンドを閉じ�?
 	HAL_GPIO_WritePin(CYL_HND_OC_GPIO_Port, CYL_HND_OC_Pin, GPIO_PIN_RESET);
+	//飛�?�出し防止機構をオン（通電時にオン）
+	HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_SET);
 	HAL_Delay(DELAY);
 	//ハンドを上げ�?
 	HAL_GPIO_WritePin(CYL_HND_UD_GPIO_Port, CYL_HND_UD_Pin, GPIO_PIN_RESET);
+	HAL_Delay(DELAY);
+	//飛�?�出し防止機構をオフ（非通電時にオフ）
+	HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_RESET);
 	isCatching = TRUE;
 }
 
@@ -152,8 +155,8 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 
 		case CANID_BALL_HAND:
 			if(RxData[0] == CATCH)Hand_Catch();
-			else if(RxData[0] == READY)Hand_Ready();
-			printf("Ball hand  %d\r\n", RxData[0]);
+			//else if(RxData[0] == READY)Hand_Ready();
+			printf("Ball catch\r\n");
 			break;
 
 		default:
