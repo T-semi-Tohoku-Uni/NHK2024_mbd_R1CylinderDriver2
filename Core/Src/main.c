@@ -101,10 +101,10 @@ void Shoot(void){
 	}
 
 	//�?填
-	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_RESET);
 	HAL_Delay(DELAY);
 	//�?填機構を戻�?
-	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_SET);
 	HAL_Delay(DELAY);
 
 	Hand_Ready();
@@ -115,13 +115,13 @@ void Hand_Catch(void){
 	//ハンドを閉じ�?
 	HAL_GPIO_WritePin(CYL_HND_OC_GPIO_Port, CYL_HND_OC_Pin, GPIO_PIN_RESET);
 	//飛�?�出し防止機構をオン（通電時にオン）
-	HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_SET);
+	//HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_SET);
 	HAL_Delay(DELAY);
 	//ハンドを上げ�?
 	HAL_GPIO_WritePin(CYL_HND_UD_GPIO_Port, CYL_HND_UD_Pin, GPIO_PIN_RESET);
 	HAL_Delay(DELAY);
 	//飛�?�出し防止機構をオフ（非通電時にオフ）
-	HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_RESET);
+	//HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_RESET);
 	isCatching = TRUE;
 }
 
@@ -229,12 +229,15 @@ int main(void)
    			Error_Handler();
    		}
 
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
