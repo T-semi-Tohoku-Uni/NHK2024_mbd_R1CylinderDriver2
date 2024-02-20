@@ -39,7 +39,7 @@ R1のエアシリンダドライバその2
 #### ボールハンド
 CANID_BALL_HAND(0x102)
 
-Data[0]==0で回収，Data[1]==1で受け入れOK
+Data[0]==0で回収，Data[0]==1で受け入れOK
 
 #### 装填
 CANID_SHOOT(0x101)
