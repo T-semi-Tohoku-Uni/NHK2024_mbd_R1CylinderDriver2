@@ -16,7 +16,7 @@
   ******************************************************************************
   */
 
-//単体で動かすときには苗アー�?との衝突に十�?気を付けること
+//単体で動かすときには苗アー?��?との衝突に�?��?気を付けること
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -64,6 +64,7 @@ uint8_t isCatching = FALSE;
 
 FDCAN_RxHeaderTypeDef RxHeader;
 uint8_t RxData[1];
+uint8_t isRx=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -94,16 +95,16 @@ void Arm_Expander(uint8_t UE){
 }
 
 void Shoot(void){
-	//ハンドが想定して�?な�?位置のまま�?填機構を稼働しな�?ためのコー�?
+	//ハンドが想定して?��?な?��?位置のまま?��?填機構を稼働しな?��?ためのコー?��?
 	if(isCatching == FALSE){
 		Hand_Catch();
 		HAL_Delay(DELAY);
 	}
 
-	//�?填
+	//?��?填
 	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_RESET);
 	HAL_Delay(DELAY);
-	//�?填機構を戻�?
+	//?��?填機構を戻?��?
 	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_SET);
 	HAL_Delay(DELAY);
 
@@ -112,25 +113,25 @@ void Shoot(void){
 }
 
 void Hand_Catch(void){
-	//ハンドを閉じ�?
+	//ハンドを閉じ?��?
 	HAL_GPIO_WritePin(CYL_HND_OC_GPIO_Port, CYL_HND_OC_Pin, GPIO_PIN_RESET);
-	//飛�?�出し防止機構をオン（通電時にオン）
+	//飛�??��出し防止機構をオン?���?�電時にオン?�?
 	//HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_SET);
 	HAL_Delay(DELAY);
-	//ハンドを上げ�?
+	//ハンドを上げ?��?
 	HAL_GPIO_WritePin(CYL_HND_UD_GPIO_Port, CYL_HND_UD_Pin, GPIO_PIN_RESET);
 	HAL_Delay(DELAY);
-	//飛�?�出し防止機構をオフ（非通電時にオフ）
+	//飛�??��出し防止機構をオフ（非通電時にオフ�?
 	//HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_RESET);
 	isCatching = TRUE;
 }
 
-//ハンドをボールキャッチ待機状態に
+//ハンドをボ�?�ルキャ�?チ�?機状態に
 void Hand_Ready(void){
 	//ハンドを開く
 	HAL_GPIO_WritePin(CYL_HND_OC_GPIO_Port, CYL_HND_OC_Pin, GPIO_PIN_SET);
 	HAL_Delay(DELAY);
-	//ハンドを下げ�?
+	//ハンドを下げ?��?
 	HAL_GPIO_WritePin(CYL_HND_UD_GPIO_Port, CYL_HND_UD_Pin, GPIO_PIN_SET);
 	isCatching = FALSE;
 }
@@ -139,29 +140,8 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 	if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET) {
 		 if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData) != HAL_OK) {
 			Error_Handler();
-		}
-
-		switch(RxHeader.Identifier){
-		case CANID_ARM_EXPANDER:
-			Arm_Expander(RxData[0]);
-			printf("Arm expander %d\r\n", RxData[0]);
-			break;
-
-		case CANID_SHOOT:
-			if(RxData[0] != 0)break;
-			Shoot();
-			printf("Shoot\r\n");
-			break;
-
-		case CANID_BALL_HAND:
-			if(RxData[0] == CATCH)Hand_Catch();
-			//else if(RxData[0] == READY)Hand_Ready();
-			printf("Ball catch\r\n");
-			break;
-
-		default:
-			printf("Invalid ID\r\n");
-		}
+		 }
+		 isRx = 1;
 	}
 }
 
@@ -237,6 +217,29 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(isRx != 1)continue;
+	  isRx = 0;
+	  switch(RxHeader.Identifier){
+	  case CANID_ARM_EXPANDER:
+		  Arm_Expander(RxData[0]);
+		  printf("Arm expander %d\r\n", RxData[0]);
+		  break;
+
+	  case CANID_SHOOT:
+		  if(RxData[0] != 0)break;
+		  Shoot();
+		  printf("Shoot\r\n");
+		  break;
+
+	  case CANID_BALL_HAND:
+		  if(RxData[0] == CATCH)Hand_Catch();
+		//else if(RxData[0] == READY)Hand_Ready();
+		  printf("Ball catch\r\n");
+		  break;
+
+	  default:
+		  printf("Invalid ID\r\n");
+	}
 
     /* USER CODE END WHILE */
 
