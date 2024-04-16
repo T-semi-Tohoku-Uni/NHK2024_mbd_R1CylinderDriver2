@@ -204,16 +204,6 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 //      }
 //		  break;
 
-		case CANID_CHECK_INJECTION_MECHANISM:
-		  printf("CANID_CHECK_INJECTION_MECHANISM\r\n");
-		  uint8_t TxData[1] = {0};
-		  FDCAN1_TxHeader.Identifier = CANID_RESPONSE_INJECTION_MECHANISM;
-		  FDCAN1_TxHeader.DataLength = FDCAN_DLC_BYTES_1;
-		  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FDCAN1_TxHeader, TxData) != HAL_OK) {
-              Error_Handler();
-      }
-      break;
-
 		default:
 			break;
 		}
