@@ -43,10 +43,13 @@
 #define CATCH 0
 #define READY 1
 
-#define UNEXPAND 0
-#define EXPAND 1
+#define UNEXPAND 1 // アーム格納
+#define EXPAND 0 // アーム展開
 
 #define DELAY 800
+
+#define SHOOT 1
+#define BACK 0
 
 #define FALSE 0
 #define TRUE 1
@@ -60,8 +63,9 @@ UART_HandleTypeDef hlpuart1;
 TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN PV */
-uint8_t isCatching = FALSE;
+uint8_t isCatching = TRUE;
 
+FDCAN_TxHeaderTypeDef FDCAN1_TxHeader;
 FDCAN_RxHeaderTypeDef RxHeader;
 uint8_t RxData[1];
 /* USER CODE END PV */
@@ -73,9 +77,9 @@ static void MX_FDCAN1_Init(void);
 static void MX_LPUART1_UART_Init(void);
 static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
-void Hand_Catch(void);
+void Hand_Catch(uint8_t hand_state);
 void Arm_Expander(uint8_t UE);
-void Shoot(void);
+void Shoot(uint8_t isShoot);
 void Hand_Ready(void);
 
 /* USER CODE END PFP */
@@ -85,53 +89,60 @@ void Hand_Ready(void);
 void Arm_Expander(uint8_t UE){
 	if(UE == EXPAND){
 		HAL_GPIO_WritePin(CYL_ARM_XP_GPIO_Port, CYL_ARM_XP_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(CYL_ARM_UXP_GPIO_Port, CYL_ARM_UXP_Pin, GPIO_PIN_RESET);
 	}
 	else if(UE == UNEXPAND){
 		HAL_GPIO_WritePin(CYL_ARM_XP_GPIO_Port, CYL_ARM_XP_Pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(CYL_ARM_UXP_GPIO_Port, CYL_ARM_UXP_Pin, GPIO_PIN_SET);
 	}
 }
 
-void Shoot(void){
+void Shoot(uint8_t isShoot){
 	//ハンドが想定して�?な�?位置のまま�?填機構を稼働しな�?ためのコー�?
-	if(isCatching == FALSE){
-		Hand_Catch();
-		HAL_Delay(DELAY);
+//	if(isCatching == FALSE){
+////		Hand_Catch();
+////		HAL_Delay(DELAY);
+//	    printf("FALSE");
+//	    return;
+//	}
+
+	if (isShoot == SHOOT) {
+	    printf("SHOOT\r\n");
+	    Arm_Expander(UNEXPAND);
+	    Hand_Catch(CATCH);
+	    HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_SET);
+	} else if (isShoot == BACK) {
+	    printf("BACK\r\n");
+	    Arm_Expander(UNEXPAND);
+	    Hand_Catch(CATCH);
+	    HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_RESET);
+	} else {
+	    return;
 	}
-
-	//�?填
-	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_RESET);
-	HAL_Delay(DELAY);
-	//�?填機構を戻�?
-	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_SET);
-	HAL_Delay(DELAY);
-
-	Hand_Ready();
-
+//	//�?填
+//	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_SET);
+//	HAL_Delay(DELAY);
+//	//�?填機構を戻�?
+//	HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_RESET);
+//	HAL_Delay(DELAY);
 }
 
-void Hand_Catch(void){
+void Hand_Catch(uint8_t hand_state){
 	//ハンドを閉じ�?
-	HAL_GPIO_WritePin(CYL_HND_OC_GPIO_Port, CYL_HND_OC_Pin, GPIO_PIN_RESET);
-	//飛�?�出し防止機構をオン（通電時にオン）
-	//HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_SET);
-	HAL_Delay(DELAY);
-	//ハンドを上げ�?
-	HAL_GPIO_WritePin(CYL_HND_UD_GPIO_Port, CYL_HND_UD_Pin, GPIO_PIN_RESET);
-	HAL_Delay(DELAY);
-	//飛�?�出し防止機構をオフ（非通電時にオフ）
-	//HAL_GPIO_WritePin(CYL_PV_GPIO_Port, CYL_PV_Pin, GPIO_PIN_RESET);
-	isCatching = TRUE;
+  if (hand_state == READY) {
+      HAL_GPIO_WritePin(CYL_HND_GPIO_Port, CYL_HND_Pin, GPIO_PIN_SET);
+      isCatching = FALSE;
+  } else if (hand_state == CATCH) {
+      HAL_GPIO_WritePin(CYL_HND_GPIO_Port, CYL_HND_Pin, GPIO_PIN_RESET);
+      isCatching = TRUE;
+  }
 }
 
 //ハンドをボールキャッチ待機状態に
 void Hand_Ready(void){
 	//ハンドを開く
-	HAL_GPIO_WritePin(CYL_HND_OC_GPIO_Port, CYL_HND_OC_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(CYL_HND_GPIO_Port, CYL_HND_Pin, GPIO_PIN_SET);
 	HAL_Delay(DELAY);
 	//ハンドを下げ�?
-	HAL_GPIO_WritePin(CYL_HND_UD_GPIO_Port, CYL_HND_UD_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(CYL_HND_GPIO_Port, CYL_HND_Pin, GPIO_PIN_SET);
 	isCatching = FALSE;
 }
 
@@ -141,27 +152,72 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 			Error_Handler();
 		}
 
+//		 __disable_irq();
+
 		switch(RxHeader.Identifier){
 		case CANID_ARM_EXPANDER:
+		  /*
+		   * 0 => Expand
+		   * 1 => UnExpand
+		   */
 			Arm_Expander(RxData[0]);
-			printf("Arm expander %d\r\n", RxData[0]);
+			if (RxData[0] == 0) {
+			    printf("ARM UnExpand\r\n");
+			} else {
+			    printf("ARM Expand\r\n");
+			}
 			break;
 
 		case CANID_SHOOT:
-			if(RxData[0] != 0)break;
-			Shoot();
-			printf("Shoot\r\n");
+			Shoot(RxData[0]);
+			printf("Shoot %d\r\n", RxData[0]);
 			break;
 
 		case CANID_BALL_HAND:
-			if(RxData[0] == CATCH)Hand_Catch();
-			//else if(RxData[0] == READY)Hand_Ready();
-			printf("Ball catch\r\n");
+		  if (RxData[0] == CATCH) {
+		      printf("Catch\r\n");
+		      Hand_Catch(CATCH);
+		  } else if (RxData[0] == READY) {
+		      printf("Ready\r\n");
+		      Hand_Catch(READY);
+		  } else {
+		      printf("error\r\n");
+		  }
 			break;
 
+//		case CANID_HAND1:
+//		  printf("CANID_ARM_ELEVATOR\r\n");
+//		  uint8_t TxData[1];
+//		  Shoot(SHOOT);
+//		  HAL_Delay(1000);
+//
+//		  if (RxData[0] == 1) {
+//		      TxData[0] = 1;
+//		  } else {
+//		      TxData[0] = 0;
+//		  }
+//
+//      FDCAN1_TxHeader.Identifier = CANID_ARM_ELEVATOR;
+//      FDCAN1_TxHeader.DataLength = FDCAN_DLC_BYTES_1;
+//      if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FDCAN1_TxHeader, TxData) != HAL_OK) {
+//              Error_Handler();
+//      }
+//		  break;
+
+		case CANID_CHECK_INJECTION_MECHANISM:
+		  printf("CANID_CHECK_INJECTION_MECHANISM\r\n");
+		  uint8_t TxData[1] = {0};
+		  FDCAN1_TxHeader.Identifier = CANID_RESPONSE_INJECTION_MECHANISM;
+		  FDCAN1_TxHeader.DataLength = FDCAN_DLC_BYTES_1;
+		  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FDCAN1_TxHeader, TxData) != HAL_OK) {
+              Error_Handler();
+      }
+      break;
+
 		default:
-			printf("Invalid ID\r\n");
+			break;
 		}
+//		 __enable_irq();
 	}
 }
 
@@ -206,28 +262,28 @@ int main(void)
   MX_LPUART1_UART_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-  FDCAN_FilterTypeDef sFilterConfig;
-   	sFilterConfig.IdType = FDCAN_STANDARD_ID;
-   	sFilterConfig.FilterIndex = 0;
-   	sFilterConfig.FilterType = FDCAN_FILTER_MASK;
-   	sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-   	sFilterConfig.FilterID1 = CANID_SHOOT;
-   	sFilterConfig.FilterID2 = 0b11111111100;
-
-   	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK) {
-   			Error_Handler();
-   		}
-   		if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE) != HAL_OK) {
-   			Error_Handler();
-   		}
-
-   		if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
-   			Error_Handler();
-   		}
-
-   		if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK) {
-   			Error_Handler();
-   		}
+//  FDCAN_FilterTypeDef sFilterConfig;
+//   	sFilterConfig.IdType = FDCAN_STANDARD_ID;
+//   	sFilterConfig.FilterIndex = 0;
+//   	sFilterConfig.FilterType = FDCAN_FILTER_MASK;
+//   	sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
+//   	sFilterConfig.FilterID1 = CANID_SHOOT;
+//   	sFilterConfig.FilterID2 = 0b11111111100;
+//
+//   	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK) {
+//   			Error_Handler();
+//   		}
+//   		if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE) != HAL_OK) {
+//   			Error_Handler();
+//   		}
+//
+//   		if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
+//   			Error_Handler();
+//   		}
+//
+//   		if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK) {
+//   			Error_Handler();
+//   		}
 
 
 
@@ -235,9 +291,11 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+//  HAL_GPIO_WritePin(CYL_HND_GPIO_Port, CYL_HND_Pin, GPIO_PIN_SET);
+//  HAL_Delay(DELAY);
+//  HAL_GPIO_WritePin(CYL_SET_GPIO_Port, CYL_SET_Pin, GPIO_PIN_SET);
   while (1)
   {
-
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -328,6 +386,39 @@ static void MX_FDCAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN1_Init 2 */
+
+  FDCAN1_TxHeader.Identifier = 0x000;
+  FDCAN1_TxHeader.IdType = FDCAN_STANDARD_ID;
+  FDCAN1_TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+  FDCAN1_TxHeader.DataLength = FDCAN_DLC_BYTES_1;
+  FDCAN1_TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+  FDCAN1_TxHeader.BitRateSwitch = FDCAN_BRS_ON;
+  FDCAN1_TxHeader.FDFormat = FDCAN_FD_CAN;
+  FDCAN1_TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+  FDCAN1_TxHeader.MessageMarker = 0;
+
+  FDCAN_FilterTypeDef FDCAN1_sFilterConfig;
+  FDCAN1_sFilterConfig.IdType = FDCAN_STANDARD_ID;
+  FDCAN1_sFilterConfig.FilterIndex = 0;
+  FDCAN1_sFilterConfig.FilterType = FDCAN_FILTER_RANGE;
+  FDCAN1_sFilterConfig.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
+  FDCAN1_sFilterConfig.FilterID1 = 0x00;
+  FDCAN1_sFilterConfig.FilterID2 = 0x7ff;
+
+  if (HAL_FDCAN_ConfigFilter(&hfdcan1, &FDCAN1_sFilterConfig) != HAL_OK) {
+      Error_Handler();
+  }
+  if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE) !=
+      HAL_OK) {
+      Error_Handler();
+  }
+  if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
+      Error_Handler();
+  }
+  if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK){
+      Error_Handler();
+  }
+
 
   /* USER CODE END FDCAN1_Init 2 */
 
@@ -435,13 +526,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, CYL_HND_OC_Pin|CYL_HND_UD_Pin|CYL_PV_Pin|CYL_SET_Pin
-                          |CYL_ARM_XP_Pin|CYL_ARM_UXP_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, CYL_ARM_XP_Pin|CYL_HND_Pin|CYL_SET_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : CYL_HND_OC_Pin CYL_HND_UD_Pin CYL_PV_Pin CYL_SET_Pin
-                           CYL_ARM_XP_Pin CYL_ARM_UXP_Pin */
-  GPIO_InitStruct.Pin = CYL_HND_OC_Pin|CYL_HND_UD_Pin|CYL_PV_Pin|CYL_SET_Pin
-                          |CYL_ARM_XP_Pin|CYL_ARM_UXP_Pin;
+  /*Configure GPIO pins : CYL_ARM_XP_Pin CYL_HND_Pin CYL_SET_Pin */
+  GPIO_InitStruct.Pin = CYL_ARM_XP_Pin|CYL_HND_Pin|CYL_SET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -466,6 +554,7 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+//      printf("Error Handler\r\n");
   }
   /* USER CODE END Error_Handler_Debug */
 }

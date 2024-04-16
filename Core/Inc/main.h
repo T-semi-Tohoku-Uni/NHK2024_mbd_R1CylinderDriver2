@@ -57,18 +57,12 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define CYL_HND_OC_Pin GPIO_PIN_7
-#define CYL_HND_OC_GPIO_Port GPIOC
-#define CYL_HND_UD_Pin GPIO_PIN_8
-#define CYL_HND_UD_GPIO_Port GPIOC
-#define CYL_PV_Pin GPIO_PIN_9
-#define CYL_PV_GPIO_Port GPIOC
-#define CYL_SET_Pin GPIO_PIN_10
-#define CYL_SET_GPIO_Port GPIOC
-#define CYL_ARM_XP_Pin GPIO_PIN_11
+#define CYL_ARM_XP_Pin GPIO_PIN_7
 #define CYL_ARM_XP_GPIO_Port GPIOC
-#define CYL_ARM_UXP_Pin GPIO_PIN_12
-#define CYL_ARM_UXP_GPIO_Port GPIOC
+#define CYL_HND_Pin GPIO_PIN_8
+#define CYL_HND_GPIO_Port GPIOC
+#define CYL_SET_Pin GPIO_PIN_9
+#define CYL_SET_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
 
