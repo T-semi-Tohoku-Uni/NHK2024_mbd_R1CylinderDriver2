@@ -58,6 +58,8 @@
 /* Private variables ---------------------------------------------------------*/
 FDCAN_HandleTypeDef hfdcan1;
 
+IWDG_HandleTypeDef hiwdg;
+
 UART_HandleTypeDef hlpuart1;
 
 TIM_HandleTypeDef htim7;
@@ -76,6 +78,7 @@ static void MX_GPIO_Init(void);
 static void MX_FDCAN1_Init(void);
 static void MX_LPUART1_UART_Init(void);
 static void MX_TIM7_Init(void);
+static void MX_IWDG_Init(void);
 /* USER CODE BEGIN PFP */
 void Hand_Catch(uint8_t hand_state);
 void Arm_Expander(uint8_t UE);
@@ -155,7 +158,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 //		 __disable_irq();
 
 		switch(RxHeader.Identifier){
-		case CANID_ARM_EXPANDER:
+		case CANID_BALL_HAND_UNEXPAND:
 		  /*
 		   * 0 => Expand
 		   * 1 => UnExpand
@@ -168,12 +171,12 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 			}
 			break;
 
-		case CANID_SHOOT:
+		case CANID_BALL_EJECTOR_CONTROLE:
 			Shoot(RxData[0]);
 			printf("Shoot %d\r\n", RxData[0]);
 			break;
 
-		case CANID_BALL_HAND:
+		case CANID_BALL_HAND_OPEN:
 		  if (RxData[0] == CATCH) {
 		      printf("Catch\r\n");
 		      Hand_Catch(CATCH);
@@ -185,24 +188,12 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 		  }
 			break;
 
-//		case CANID_HAND1:
-//		  printf("CANID_ARM_ELEVATOR\r\n");
-//		  uint8_t TxData[1];
-//		  Shoot(SHOOT);
-//		  HAL_Delay(1000);
-//
-//		  if (RxData[0] == 1) {
-//		      TxData[0] = 1;
-//		  } else {
-//		      TxData[0] = 0;
-//		  }
-//
-//      FDCAN1_TxHeader.Identifier = CANID_ARM_ELEVATOR;
-//      FDCAN1_TxHeader.DataLength = FDCAN_DLC_BYTES_1;
-//      if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &FDCAN1_TxHeader, TxData) != HAL_OK) {
-//              Error_Handler();
-//      }
-//		  break;
+		case CANID_CHECK_IS_ACTIVE:
+      if (HAL_IWDG_Refresh(&hiwdg) != HAL_OK)
+      {
+        Error_Handler();
+      }
+      break;
 
 		default:
 			break;
@@ -251,6 +242,7 @@ int main(void)
   MX_FDCAN1_Init();
   MX_LPUART1_UART_Init();
   MX_TIM7_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
 //  FDCAN_FilterTypeDef sFilterConfig;
 //   	sFilterConfig.IdType = FDCAN_STANDARD_ID;
@@ -309,8 +301,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
@@ -415,6 +408,35 @@ static void MX_FDCAN1_Init(void)
 }
 
 /**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_32;
+  hiwdg.Init.Window = 999;
+  hiwdg.Init.Reload = 999;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+
+  /* USER CODE END IWDG_Init 2 */
+
+}
+
+/**
   * @brief LPUART1 Initialization Function
   * @param None
   * @retval None
@@ -514,9 +536,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, CYL_ARM_XP_Pin|CYL_HND_Pin|CYL_SET_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(BoardLED_GPIO_Port, BoardLED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : CYL_ARM_XP_Pin CYL_HND_Pin CYL_SET_Pin */
   GPIO_InitStruct.Pin = CYL_ARM_XP_Pin|CYL_HND_Pin|CYL_SET_Pin;
@@ -524,6 +550,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : BoardLED_Pin */
+  GPIO_InitStruct.Pin = BoardLED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(BoardLED_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -541,6 +574,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+  HAL_GPIO_WritePin(BoardLED_GPIO_Port, BoardLED_Pin, GPIO_PIN_SET);
   __disable_irq();
   while (1)
   {

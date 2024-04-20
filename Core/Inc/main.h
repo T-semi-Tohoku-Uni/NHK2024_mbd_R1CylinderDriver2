@@ -63,6 +63,8 @@ void Error_Handler(void);
 #define CYL_HND_GPIO_Port GPIOC
 #define CYL_SET_Pin GPIO_PIN_9
 #define CYL_SET_GPIO_Port GPIOC
+#define BoardLED_Pin GPIO_PIN_2
+#define BoardLED_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 
